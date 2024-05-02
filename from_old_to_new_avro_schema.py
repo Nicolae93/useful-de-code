@@ -30,9 +30,12 @@ updated_schema_path = path + 'updated_schema.json'
 with open(updated_schema_path, 'w') as file:
     json.dump(old_schema, file)
 
-# Print fields to be added in the specified format
-for field in fields_to_add:
+# Print fields to be added in the specified format, with a comma after each except the last
+for i, field in enumerate(fields_to_add):
     field_name = field['name']
-    # Typically, the type is listed as a list; we take the first type that is not 'null'
     field_type = next(t for t in field['type'] if t != 'null')
-    print(f"{field_name} {field_type}")    
+    # Check if the current field is the last in the list
+    if i < len(fields_to_add) - 1:
+        print(f"{field_name} {field_type},")
+    else:
+        print(f"{field_name} {field_type}")
