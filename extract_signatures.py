@@ -16,12 +16,12 @@ from typing import List, Union
 
 import chilkat2
 
-def extract_pdf_signatures(file_path: str) -> Union[List[str], str]:
+def extract_pdf_signatures(file_bytes: bytes) -> Union[List[str], str]:
     """
     Extract digital signatures from a PDF file using the Chilkat library.
 
     Args:
-        file_path (str): Path to the PDF file.
+        file_bytes (bytes): Byte content of the PDF file.
 
     Returns:
         Union[List[str], str]: List of extracted signature information if successful,
@@ -31,9 +31,17 @@ def extract_pdf_signatures(file_path: str) -> Union[List[str], str]:
         # Initialize the Chilkat Pdf object
         pdf = chilkat2.Pdf()
 
-        # Load the PDF file
-        if not pdf.LoadFile(file_path):
-            return f"Failed to load PDF file: {pdf.LastErrorText}"
+        # Create a BinData object
+        bin_data = chilkat2.BinData()
+
+        # Convert file_bytes to a memoryview and append to BinData
+        file_memoryview = memoryview(file_bytes)
+        if not bin_data.AppendBinary(file_memoryview):
+            return "Failed to append PDF data to BinData object."
+
+        # Load the PDF from the BinData object
+        if not pdf.LoadBd(bin_data):
+            return f"Failed to load PDF data: {pdf.LastErrorText}"
 
         # Get the number of signatures in the PDF
         num_signatures = pdf.NumSignatures
@@ -71,12 +79,12 @@ def extract_pdf_signatures(file_path: str) -> Union[List[str], str]:
         return f"Chilkat PDF handling error: {str(e)}"
 
 
-def extract_p7m_signatures(file_path: str) -> Union[List[str], str]:
+def extract_p7m_signatures(file_bytes: bytes) -> Union[List[str], str]:
     """
     Extract digital signatures from a .p7m file using the Chilkat2 library.
 
     Args:
-        file_path (str): Path to the .p7m file.
+        file_bytes (bytes): Byte content of the .p7m file.
 
     Returns:
         Union[List[str], str]: List of extracted signature information if successful,
@@ -90,15 +98,25 @@ def extract_p7m_signatures(file_path: str) -> Union[List[str], str]:
         if not crypt.UnlockComponent("YourUnlockCode"):
             return f"Chilkat unlock failed: {crypt.LastErrorText}"
 
-        # Verify the .p7m file and extract the original content
-        output_file = "extracted_content"
-        if not crypt.VerifyP7M(file_path, output_file):
-            return f"Failed to verify .p7m file: {crypt.LastErrorText}"
+        # Create a BinData object and append the file bytes
+        bin_data = chilkat2.BinData()
+        if not bin_data.AppendBinary(memoryview(file_bytes)):
+            return "Failed to append .p7m data to BinData object."
+
+        # Create a BinData object to hold the verified content
+        output_bin_data = chilkat2.BinData()
+
+        # Verify the .p7m data and extract the original content
+        if not crypt.OpaqueVerifyBd(bin_data):
+            return f"Failed to verify .p7m data: {crypt.LastErrorText}"
+
+        # The verified content is now in bin_data
+        output_bin_data = bin_data
 
         # Retrieve signer certificates
         num_signers = crypt.NumSignerCerts
         if num_signers == 0:
-            return "No signers found in the .p7m file."
+            return "No signers found in the .p7m data."
 
         signatures = []
         for i in range(num_signers):
@@ -137,13 +155,9 @@ def extract_p7m_signatures(file_path: str) -> Union[List[str], str]:
             else:
                 signatures.append(f"Failed to retrieve signer certificate at index {i}.")
 
-        # Clean up the extracted file
-        if os.path.exists(output_file):
-            os.remove(output_file)
-
         return signatures
 
-    except AttributeError as e:
+    except Exception as e:
         return f"Chilkat2 handling error: {str(e)}"
 
 
@@ -165,10 +179,14 @@ def main():
 
     file_extension = os.path.splitext(args.file_path)[1].lower()
 
+    # Read the file content as bytes
+    with open(args.file_path, 'rb') as f:
+        file_bytes = f.read()
+
     if file_extension == '.pdf':
-        result = extract_pdf_signatures(args.file_path)
+        result = extract_pdf_signatures(file_bytes)
     elif file_extension == '.p7m':
-        result = extract_p7m_signatures(args.file_path)
+        result = extract_p7m_signatures(file_bytes)
     else:
         print("Unsupported file type. Please provide a PDF or .p7m file.")
         return
