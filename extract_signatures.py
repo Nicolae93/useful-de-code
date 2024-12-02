@@ -103,15 +103,9 @@ def extract_p7m_signatures(file_bytes: bytes) -> Union[List[str], str]:
         if not bin_data.AppendBinary(memoryview(file_bytes)):
             return "Failed to append .p7m data to BinData object."
 
-        # Create a BinData object to hold the verified content
-        output_bin_data = chilkat2.BinData()
-
         # Verify the .p7m data and extract the original content
         if not crypt.OpaqueVerifyBd(bin_data):
             return f"Failed to verify .p7m data: {crypt.LastErrorText}"
-
-        # The verified content is now in bin_data
-        output_bin_data = bin_data
 
         # Retrieve signer certificates
         num_signers = crypt.NumSignerCerts
