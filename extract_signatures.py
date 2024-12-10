@@ -116,7 +116,9 @@ def extract_p7m_signatures(file_bytes: bytes) -> Union[List[str], str]:
         for i in range(num_signers):
             cert = crypt.GetSignerCert(i)
             if cert is not None:
+                signing_time = crypt.GetSignatureSigningTimeStr(i)  # Retrieve signing time
                 cert_info = {
+                    "SigningTime": signing_time if signing_time else "Not available",
                     "AuthorityKeyId": cert.AuthorityKeyId,
                     "CertVersion": cert.CertVersion,
                     "Expired": cert.Expired,
