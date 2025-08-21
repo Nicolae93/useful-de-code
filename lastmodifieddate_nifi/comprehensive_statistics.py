@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Comprehensive statistical analysis script for LastModifiedDate values from JSON files.
+Comprehensive statistical analysis script for timestamp field values from JSON files.
 Calculates: Mean, Median, Mode, Range, Min/Max, Count, Sum, Quartiles, IQR, and Outliers.
 Compatible with PySpark environments and data lake workflows.
 """
@@ -54,30 +54,34 @@ def load_json_data(file_path: str) -> List[Dict[str, Any]]:
         sys.exit(1)
 
 
-def extract_dates(data: List[Dict[str, Any]]) -> List[datetime]:
+def extract_dates(data: List[Dict[str, Any]], timestamp_field: str) -> Tuple[List[datetime], List[str]]:
     """
-    Extract and parse LastModifiedDate values from JSON data.
+    Extract and parse timestamp field values from JSON data.
     
     Args:
-        data: List of dictionaries containing LastModifiedDate
+        data: List of dictionaries containing timestamp field
+        timestamp_field: Name of the timestamp field to extract
         
     Returns:
-        List[datetime]: List of parsed datetime objects
+        Tuple[List[datetime], List[str]]: Tuple of parsed datetime objects and original timestamp strings
     """
     dates = []
+    original_formats = []
     for i, record in enumerate(data):
-        if 'LastModifiedDate' not in record:
-            print(f"Warning: Record {i} missing 'LastModifiedDate' field")
+        if timestamp_field not in record:
+            print(f"Warning: Record {i} missing '{timestamp_field}' field")
             continue
         
         try:
-            date_obj = parse_iso_date(record['LastModifiedDate'])
+            original_timestamp = record[timestamp_field]
+            date_obj = parse_iso_date(original_timestamp)
             dates.append(date_obj)
+            original_formats.append(original_timestamp)
         except Exception as e:
             print(f"Warning: Could not parse date in record {i}: {e}")
             continue
     
-    return dates
+    return dates, original_formats
 
 
 class DateTimeStatistics:
@@ -85,17 +89,30 @@ class DateTimeStatistics:
     Comprehensive statistics calculator for datetime data.
     """
     
-    def __init__(self, dates: List[datetime]):
+    def __init__(self, dates: List[datetime], original_formats: Optional[List[str]] = None):
         """
-        Initialize with list of datetime objects.
+        Initialize with list of datetime objects and their original formats.
         
         Args:
             dates: List of datetime objects to analyze
+            original_formats: List of original timestamp strings (same order as dates)
         """
         if not dates:
             raise ValueError("No dates provided for statistical analysis")
         
-        self.dates = sorted(dates)
+        # Sort dates and maintain original format mapping
+        if original_formats and len(original_formats) == len(dates):
+            # Create pairs and sort by datetime
+            paired_data = list(zip(dates, original_formats))
+            paired_data.sort(key=lambda x: x[0])
+            self.dates, sorted_originals = zip(*paired_data)
+            self.dates = list(self.dates)
+            # Create mapping from datetime to original format
+            self.original_format_map = dict(zip(dates, original_formats))
+        else:
+            self.dates = sorted(dates)
+            self.original_format_map = {}
+        
         self.count = len(dates)
         self.timestamps = [dt.timestamp() for dt in self.dates]
         
@@ -191,6 +208,10 @@ class DateTimeStatistics:
         
         return lower_outliers, upper_outliers
     
+    def get_original_format(self, dt: datetime) -> Optional[str]:
+        """Get original format for a datetime object."""
+        return self.original_format_map.get(dt)
+    
     def calculate_sum(self) -> float:
         """Calculate sum of all timestamps."""
         return sum(self.timestamps)
@@ -220,9 +241,10 @@ def format_duration(td: timedelta) -> str:
 def main():
     """Main function to process input file and compute comprehensive statistics."""
     parser = argparse.ArgumentParser(
-        description='Calculate comprehensive statistics for LastModifiedDate from JSON file'
+        description='Calculate comprehensive statistics for timestamp field from JSON file'
     )
     parser.add_argument('input_file', help='Path to the input JSON file')
+    parser.add_argument('timestamp_field', help='Name of the timestamp field to analyze')
     parser.add_argument('--output-format', choices=['iso', 'timestamp', 'readable'], 
                        default='readable', help='Output format for dates')
     parser.add_argument('--show-outliers', action='store_true', 
@@ -235,7 +257,7 @@ def main():
     data = load_json_data(args.input_file)
     
     print(f"Found {len(data)} records")
-    dates = extract_dates(data)
+    dates, original_formats = extract_dates(data, args.timestamp_field)
     
     if not dates:
         print("Error: No valid dates found in the input file")
@@ -244,16 +266,24 @@ def main():
     print(f"Successfully parsed {len(dates)} dates\n")
     
     try:
-        stats = DateTimeStatistics(dates)
+        stats = DateTimeStatistics(dates, original_formats)
         
         # Format function based on output format
-        def format_date(dt: datetime) -> str:
+        def format_date(dt: datetime, show_original: bool = True) -> str:
             if args.output_format == 'iso':
-                return dt.isoformat()
+                formatted = dt.isoformat()
             elif args.output_format == 'timestamp':
-                return str(int(dt.timestamp()))
+                formatted = str(int(dt.timestamp()))
             else:  # readable
-                return dt.strftime('%Y-%m-%d %H:%M:%S %Z')
+                formatted = dt.strftime('%Y-%m-%d %H:%M:%S %Z')
+            
+            if show_original:
+                original = stats.get_original_format(dt)
+                if original:
+                    return f"{formatted} ({original})"
+                else:
+                    return f"{formatted} (calculated)"
+            return formatted
         
         # Calculate and display all statistics
         print("=" * 60)
