@@ -1,0 +1,67 @@
+{
+    "type": "record",
+    "name": "nifiRecord",
+    "namespace": "org.apache.nifi",
+    "fields":
+    [
+        {
+            "name": "Id",
+            "type":
+            [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "Name",
+            "type":
+            [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "Email",
+            "type":
+            [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "CreatedDate",
+            "type":
+            [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "LastModifiedDate",
+            "type":
+            [
+                "string",
+                "null"
+            ]
+        },
+        {
+            "name": "dl_event_tms",
+            "type":
+            [
+                "null",
+                {
+                    "type": "long",
+                    "logicalType": "timestamp-millis"
+                }
+            ]
+        },
+        {
+            "name": "dl_ingestion_tms",
+            "type":
+            [
+                "null",
+                "long"
+            ]
+        }
+    ]
+}

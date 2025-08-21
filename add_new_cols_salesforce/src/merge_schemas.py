@@ -293,13 +293,18 @@ def main():
     parser.add_argument('--output_ddl', help='Path to output the DDL statements')
     args = parser.parse_args()
     
-    # Set default output file names with entity_name prefix
+    # Set default output file names with entity_name prefix and proper directory structure
     if not args.output_schema:
-        args.output_schema = f'{args.entity_name}_merged_schema.json'
+        args.output_schema = f'output/merged_schemas/{args.entity_name}_merged_schema.json'
     if not args.output_ddl:
-        args.output_ddl = f'{args.entity_name}_iceberg_ddl.py'
+        args.output_ddl = f'output/ddl/{args.entity_name}_iceberg_ddl.py'
     
     try:
+        # Ensure output directories exist
+        import os
+        os.makedirs('output/merged_schemas', exist_ok=True)
+        os.makedirs('output/ddl', exist_ok=True)
+        
         # Merge the schema files
         merged_schema, new_fields, last_field = merge_avro_schemas(
             args.old_schema, 

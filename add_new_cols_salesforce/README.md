@@ -24,13 +24,13 @@ Clone this repository and ensure the script is executable:
 ```bash
 git clone <repository-url>
 cd <repository-directory>
-chmod +x merge_schemas.py
+chmod +x src/merge_schemas.py
 ```
 
 ## Usage
 
 ```bash
-python merge_schemas.py --old_schema <old_schema_path> --new_schema <new_schema_path> --db_name <database_name> --entity_name <entity_name>
+python src/merge_schemas.py --old_schema <old_schema_path> --new_schema <new_schema_path> --db_name <database_name> --entity_name <entity_name>
 ```
 
 ### Required Arguments
@@ -42,18 +42,18 @@ python merge_schemas.py --old_schema <old_schema_path> --new_schema <new_schema_
 
 ### Optional Arguments
 
-- `--output_schema`: Path to output the merged schema (default: "merged_schema.json")
-- `--output_ddl`: Path to output the DDL statements (default: "iceberg_ddl.py")
+- `--output_schema`: Path to output the merged schema (default: "output/merged_schemas/{entity_name}_merged_schema.json")
+- `--output_ddl`: Path to output the DDL statements (default: "output/ddl/{entity_name}_iceberg_ddl.py")
 
 ## Example
 
 ```bash
-python merge_schemas.py --old_schema old_schema.json --new_schema new_schema.json --db_name dtd_pad26 --entity_name outfunds__funding_program__c
+python src/merge_schemas.py --old_schema input_avro_schemas/example_old.json --new_schema input_avro_schemas/example_new.json --db_name example_db --entity_name example_entity_name
 ```
 
 This will:
-1. Merge the schemas and output to `merged_schema.json`
-2. Generate Iceberg DDL statements and save them to `iceberg_ddl.py`
+1. Merge the schemas and output to `output/merged_schemas/example_entity_name_merged_schema.json`
+2. Generate Iceberg DDL statements and save them to `output/ddl/example_entity_name_iceberg_ddl.py`
 
 ## Input Schema Requirements
 
@@ -80,10 +80,33 @@ The generated Python script:
 
 ## Running the Generated DDL
 
-The generated `iceberg_ddl.py` script can be executed in a Spark environment with Iceberg support:
+The generated DDL scripts can be executed in a Spark environment with Iceberg support:
 
 ```bash
-spark-submit iceberg_ddl.py
+spark-submit output/ddl/account_iceberg_ddl.py
+```
+
+## Directory Structure
+
+```
+├── src/                        # Source code only
+│   └── merge_schemas.py        # Main script
+├── input_avro_schemas/         # Input Avro schema files only
+│   ├── example_old.json        # Example: old schema version
+│   ├── example_new.json        # Example: new schema version
+│   ├── account_old.json        # Input: old account schema
+│   ├── account_new.json        # Input: new account schema
+│   ├── case_old.json          # Input: old case schema
+│   └── case_new.json          # Input: new case schema
+└── output/                    # Generated files only
+    ├── ddl/                    # Generated DDL scripts
+    │   ├── account_iceberg_ddl.py  # Generated DDL for account
+    │   ├── case_iceberg_ddl.py     # Generated DDL for case
+    │   └── iceberg_ddl.py          # Default DDL output
+    └── merged_schemas/         # Generated merged schemas
+        ├── account_merged_schema.json # Generated merged account schema
+        ├── case_merged_schema.json    # Generated merged case schema
+        └── merged_schema.json      # Default merged output
 ```
 
 ## Limitations
