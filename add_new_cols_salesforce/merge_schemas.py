@@ -289,9 +289,15 @@ def main():
     parser.add_argument('--new_schema', required=True, help='Path to the new schema file')
     parser.add_argument('--db_name', required=True, help='Database name')
     parser.add_argument('--entity_name', required=True, help='Entity/table name')
-    parser.add_argument('--output_schema', default='merged_schema.json', help='Path to output the merged schema')
-    parser.add_argument('--output_ddl', default='iceberg_ddl.py', help='Path to output the DDL statements')
+    parser.add_argument('--output_schema', help='Path to output the merged schema')
+    parser.add_argument('--output_ddl', help='Path to output the DDL statements')
     args = parser.parse_args()
+    
+    # Set default output file names with entity_name prefix
+    if not args.output_schema:
+        args.output_schema = f'{args.entity_name}_merged_schema.json'
+    if not args.output_ddl:
+        args.output_ddl = f'{args.entity_name}_iceberg_ddl.py'
     
     try:
         # Merge the schema files
